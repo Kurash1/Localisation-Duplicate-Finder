@@ -52,18 +52,21 @@ void LoadFolder(string path, string language)
 void LoadFile(string path)
 {
     Console.WriteLine($"Reading File {path}".Pastel(ConsoleColor.Yellow));
-    string file = File.ReadAllText(path);
+    string[] file = File.ReadAllLines(path);
 
-    MatchCollection mc = reg.Matches(file);
-    foreach (Match m in mc.Cast<Match>())
+    for (int i = 0; i < file.Length; i++)
     {
-        if (Localisation.ContainsKey(m.Value))
-        {
-            Console.WriteLine($"Existing Key {m.Value} in File {path} original was from {Localisation[m.Value]}".Pastel(ConsoleColor.Red));
-        }
-        else
-        {
-            Localisation.Add(m.Value, path);
+        string s = file[i];
+        Match m = reg.Match(s);
+        if (m.Success) {
+            if (Localisation.ContainsKey(m.Value))
+            {
+                Console.WriteLine($"Existing Key {m.Value} in File {path} at line {i+1} original was from {Localisation[m.Value]}".Pastel(ConsoleColor.Red));
+            }
+            else
+            {
+                Localisation.Add(m.Value, path);
+            }
         }
     }
 }
@@ -72,9 +75,6 @@ partial class Program
 {
     [GeneratedRegex("\\b\\S+(?=:\\d*\\s*\"[^\\n]*\")")]
     private static partial Regex MyRegex();
-}
-partial class Program
-{
     [GeneratedRegex("(?<=^|\\n)l_\\S+(?=:)")]
     private static partial Regex MyOtherRegex();
 }
