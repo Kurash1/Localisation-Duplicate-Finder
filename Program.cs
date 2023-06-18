@@ -1,10 +1,24 @@
 ﻿// ./"Localisation Duplicate Finder.exe" "C:\SteamLibrary\steamapps\common\Europa Universalis IV\localisation" "G:\Ohjelmat\Arc5\bin\Debug\net6.0\target\localisation"
 using Pastel;
 using System.Text.RegularExpressions;
-string[] languages = new string[] { "english" };
+using System.Linq;
+
+List<string> languages = new();
 Console.WriteLine(string.Join(' ', args));
 Dictionary<string, string> Localisation;
 Regex reg = MyRegex();
+Regex reg2 = MyOtherRegex();
+foreach(string arg in args)
+{
+    string path = Path.Combine(arg, "languages.yml");
+    if (File.Exists(path))
+    {
+        languages = new(); //Guessing it works like replacing the vanilla ones
+        string file = File.ReadAllText(path);
+        MatchCollection mc = reg2.Matches(file);
+        languages.AddRange(from Match m in mc select m.Value);
+    }
+}
 
 foreach(string language in languages)
 {
@@ -23,7 +37,7 @@ void LoadFolder(string path, string language)
 
     foreach (string file in Files)
     {
-        if(file.EndsWith($"_l_{language}.yml"))
+        if(file.Contains($"{language}"))
             LoadFile(file);
     }
 
@@ -38,27 +52,29 @@ void LoadFolder(string path, string language)
 void LoadFile(string path)
 {
     Console.WriteLine($"Reading File {path}".Pastel(ConsoleColor.Yellow));
-    string[] file = File.ReadAllLines(path);
+    string file = File.ReadAllText(path);
 
-    for(int i = 1; i < file.Length; i++)
+    MatchCollection mc = reg.Matches(file);
+    foreach (Match m in mc.Cast<Match>())
     {
-        Match m = reg.Match(file[i]);
-        if(m.Success)
+        if (Localisation.ContainsKey(m.Value))
         {
-            if (Localisation.ContainsKey(m.Groups[1].Value))
-            {
-                Console.WriteLine($"Existing Key {m.Groups[1].Value} in File {path} at line {i + 1} original was from {Localisation[m.Groups[1].Value]}".Pastel(ConsoleColor.Red));
-            }
-            else
-            {
-                Localisation.Add(m.Groups[1].Value, path);
-            }
+            Console.WriteLine($"Existing Key {m.Value} in File {path} original was from {Localisation[m.Value]}".Pastel(ConsoleColor.Red));
+        }
+        else
+        {
+            Localisation.Add(m.Value, path);
         }
     }
 }
 
 partial class Program
 {
-    [GeneratedRegex("^ ([A-Za-z0-9_.-]+):\\d* \"(.*)\"$")]
+    [GeneratedRegex("\\b\\S+(?=:\\d*\\s*\"[^\\n]*\")")]
     private static partial Regex MyRegex();
+}
+partial class Program
+{
+    [GeneratedRegex("(?<=^|\\n)l_\\S+(?=:)")]
+    private static partial Regex MyOtherRegex();
 }
